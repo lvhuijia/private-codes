@@ -10,6 +10,8 @@ import xlwt
 import xlsxwriter
 import xlrd
 from itertools import groupby
+# import pickle
+import json
 
 
 def clear_file_folder(file_path):
@@ -55,6 +57,64 @@ def draw_hybrid_mode_pie(mask, cycle_hybrid_mode, label_list, color_list, fig_ti
     return hybrid_mode_ditribution
 
 
+def draw_fc_vs_velocity_bar(fc_vel_dict, vel_start, vel_stop, vel_step):
+    fig = plt.figure()
+    ax1 = fig.add_subplot(1, 1, 1)
+    ax2 = ax1.twinx()
+    x = 0
+    x_ticks = []
+    for j in range(0, int((vel_stop - vel_start) / vel_step)):
+        bar_list = []
+        legend_list = []
+        bar_width = 0.25
+        bar1 = ax1.bar(x, fc_vel_dict[str(j*vel_step)+'-'+str((j+1)*vel_step)]['fc_100_km'], width=bar_width, color='r', label='1')
+        bar2 = ax2.bar(x + bar_width, fc_vel_dict[str(j*vel_step)+'-'+str((j+1)*vel_step)]['ec_100_km'], width=bar_width, color='g', label='2')
+        bar3 = ax1.bar(x - bar_width, fc_vel_dict[str(j*vel_step)+'-'+str((j+1)*vel_step)]['net_fc_100_km'], width=bar_width, color='black', label='3')
+        x_ticks.append(str(j*vel_step)+'-'+str((j+1)*vel_step))
+        x += 1
+    bar_list.append(bar1)
+    bar_list.append(bar2)
+    bar_list.append(bar3)
+    legend_list.append('fuel consumption(L/100km)')
+    legend_list.append('electric consumption(L/100km)')
+    legend_list.append('net fuel consumption(Kw/100km)')
+    ax1.legend(bar_list, legend_list, loc='upper right')
+    ax1.set_xticks([i for i in range(0, int((vel_stop - vel_start) / vel_step))])
+    ax1.set_xticklabels(x_ticks)
+    ax1.set_xlabel('velocity(kph)')
+    ax1.set_ylabel('fuel consumption')
+    ax1.set_yticks([i*2 for i in range(0, 9)])
+    ax2.set_yticks([-10+i*5 for i in range(0, 11)])
+    ax1.set_ylim([-4, 16])
+    ax2.set_ylim([-10, 40])
+    ax2.set_ylabel('electric consumption')
+    plt.savefig(r'C:\Users\吕惠加\Desktop\bar')
+    fig.show()
+
+
+def export_bar_value(fc_vel_dict):
+    workbook = xlsxwriter.Workbook(r'C:\Users\吕惠加\Desktop\bar_data.xlsx')
+    worksheet = workbook.add_worksheet()
+    worksheet.write_row(0, 0, ['velocity'])
+    worksheet.write_row(0, 1, ['nfc'])
+    worksheet.write_row(0, 2, ['fc'])
+    worksheet.write_row(0, 3, ['ec'])
+    worksheet.write_row(0, 4, ['dis_sum'])
+
+    count = 0
+    for key in fc_vel_dict:
+        if '-' in key:
+            count += 1
+            worksheet.write_row(count, 0, [key])
+            worksheet.write_row(count, 1, [fc_vel_dict[key]['net_fc_100_km']])
+            worksheet.write_row(count, 2, [fc_vel_dict[key]['fc_100_km']])
+            worksheet.write_row(count, 3, [fc_vel_dict[key]['ec_100_km']])
+            worksheet.write_row(count, 4, [fc_vel_dict[key]['dis_sum']])
+
+    worksheet.write_row(count + 1, 0, ['idle'])
+    worksheet.write_row(count + 1, 1, [fc_vel_dict['idle']['net_fc/time']])
+
+
 class FuelConsumption(object):
 
     def __init__(self, **kwargs):
@@ -80,7 +140,8 @@ class FuelConsumption(object):
         vel_stop = 100
         fc_vel_dict = {}
         for i in range(0, int((vel_stop-vel_start)/vel_step)):
-            fc_vel_dict[str(i*10)+'-'+str((i+1)*10)] = {'dis_sum': 0, 'fc_sum': 0, 'fc_100_km':0}
+            fc_vel_dict[str(i*vel_step)+'-'+str((i+1)*vel_step)] = {'dis_sum': 0, 'fc_sum': 0, 'ec_sum': 0}
+        fc_vel_dict['idle'] = {'fc_sum': 0, 'ec_sum': 0, 'time_sum': 0}
         # end of settings--------------------------------------
 
         # variable initialization-------------------------------
@@ -158,6 +219,7 @@ class FuelConsumption(object):
                 #     Data_ful = Data_ful.convertToPandas(sampling=1 / fre)
                 if '.csv' in filename:
                     Data_ful = pd.read_csv(filename_full, header=14, skiprows=[15, 16], skip_blank_lines=False, encoding='GB18030')
+                    Data_ful = Data_ful[5*fre:]  # drop the data when initializing INTEST
                 else:
                     continue
 
@@ -168,7 +230,7 @@ class FuelConsumption(object):
                 vel_gps = Data_ful[dbc[edu_type]['velocity']].tolist()
                 voltage = Data_ful[dbc[edu_type]['voltage']].tolist()
                 current = Data_ful[dbc[edu_type]['current']].tolist()
-                power = [voltage[i]*current[i] for i in range(0, len(current))]
+                power = [voltage[i]*current[i] for i in range(0, len(current))]  # watt
                 ac_power = Data_ful[dbc[edu_type]['ac_power']].tolist()
                 pedal = Data_ful[dbc[edu_type]['pedal']].tolist()
                 brake = Data_ful[dbc[edu_type]['brake']].tolist()
@@ -186,21 +248,35 @@ class FuelConsumption(object):
 
                 # fc_acc_L_100km = [fc_acc_L[i]/(vel_gps[i]/3600/fre)*100 for i in range(0, len(fc_acc_L))]
 
+                # fc/ec vs velocity calculation；data extract
+
+                # idle fc/ec data extract:
+                flag = [1 if (vel_gps[i] == 0) else 0 for i in range(0, len(pedal))]
+                fc_vel_dict['idle']['fc_sum'] += sum([fc_acc_L[i]*flag[i] for i in range(0, len(flag))])  # L
+                # print(sum([fc_acc_L[i]*flag[i] for i in range(0, len(flag))]))
+                fc_vel_dict['idle']['ec_sum'] += sum([power[i]*flag[i] for i in range(0, len(flag))])/fre/1000/3600  # kwh
+                fc_vel_dict['idle']['time_sum'] += sum(flag)/fre  # s
+
                 for j in range(0, int((vel_stop - vel_start) / vel_step)):
-                    flag = [1 if (j+1)*10 > vel > j*10 else 0 for vel in vel_gps]
+                    flag = [1 if (j+1)*vel_step > vel > j*vel_step else 0 for vel in vel_gps]
+                    validated_segement_counts = 0
                     for k, l in groupby(enumerate(np.array(np.where(flag)[0])), lambda x: x[1] - x[0]):
                         index_list = [index for group, index in l]
                         length = index_list[-1] - index_list[0]
-                        if length > fre*5:
+                        if length > fre*1:
                             start = index_list[0]
                             end = index_list[-1]
-                            fc_vel_dict[str(j*10)+'-'+str((j+1)*10)]['fc_sum'] += sum(fc_acc_L[start:end+1])
-                            fc_vel_dict[str(j * 10) + '-' + str((j + 1) * 10)]['dis_sum'] += sum(vel_gps[start:end+1])/3600/fre
-                    try:
-                        fc_vel_dict[str(j * 10) + '-' + str((j + 1) * 10)]['fc_100_km'] = \
-                            fc_vel_dict[str(j*10)+'-'+str((j+1)*10)]['fc_sum']/fc_vel_dict[str(j * 10) + '-' + str((j + 1) * 10)]['dis_sum']*100
-                    except ZeroDivisionError:
-                        fc_vel_dict[str(j * 10) + '-' + str((j + 1) * 10)]['fc_100_km'] = 0
+                            fc_vel_dict[str(j*vel_step)+'-'+str((j+1)*vel_step)]['fc_sum'] += sum(fc_acc_L[start:end+1])
+                            fc_vel_dict[str(j*vel_step)+'-'+str((j+1)*vel_step)]['ec_sum'] += sum(power[start:end+1])/fre/1000/3600  # kwh
+                            fc_vel_dict[str(j * vel_step) + '-' + str((j + 1) * vel_step)]['dis_sum'] += sum(vel_gps[start:end+1])/3600/fre
+                            validated_segement_counts += 1
+                    # print(filename + ':' + str(j*vel_step) + '-' + str((j+1)*vel_step) + ':' + str(validated_segement_counts))
+
+                    # try:
+                    #     fc_vel_dict[str(j * vel_step) + '-' + str((j + 1) * vel_step)]['fc_100_km'] = \
+                    #         fc_vel_dict[str(j*vel_step)+'-'+str((j+1)*vel_step)]['fc_sum']/fc_vel_dict[str(j * vel_step) + '-' + str((j + 1) * vel_step)]['dis_sum']*100
+                    # except ZeroDivisionError:
+                    #     fc_vel_dict[str(j * vel_step) + '-' + str((j + 1) * vel_step)]['fc_100_km'] = 0
 
                 # cycle info calculation
                 cycle_result['日期'].append(info[0])
@@ -254,6 +330,43 @@ class FuelConsumption(object):
                     mode_distribution.append(hybrid_mode.count(j))
                 cycle_hybrid_mode.append(mode_distribution)
         # end of cyclic data extract and calculation--------------------------------------
+
+        # fc/ec vs velocity index calculation based on aggregated data: L/100km, Kw/100km, net L/100km, idle fc
+        fc_vel_dict['checksum_dis'] = 0
+
+        for j in range(0, int((vel_stop - vel_start) / vel_step)):
+            fc_vel_dict['checksum_dis'] += fc_vel_dict[str(j * vel_step) + '-' + str((j + 1) * vel_step)]['dis_sum']
+            try:
+                fc_vel_dict[str(j * vel_step) + '-' + str((j + 1) * vel_step)]['net_fc_100_km'] = \
+                    (fc_vel_dict[str(j*vel_step)+'-'+str((j+1)*vel_step)]['fc_sum'] + fc_vel_dict[str(j*vel_step)+'-'+str((j+1)*vel_step)]['ec_sum']/2.22)/fc_vel_dict[str(j * vel_step) + '-' + str((j + 1) * vel_step)]['dis_sum']*100
+            except ZeroDivisionError:
+                fc_vel_dict[str(j * vel_step) + '-' + str((j + 1) * vel_step)]['net_fc_100_km'] = 0
+
+            try:
+                fc_vel_dict[str(j * vel_step) + '-' + str((j + 1) * vel_step)]['fc_100_km'] = \
+                    fc_vel_dict[str(j*vel_step)+'-'+str((j+1)*vel_step)]['fc_sum']/fc_vel_dict[str(j * vel_step) + '-' + str((j + 1) * vel_step)]['dis_sum']*100
+            except ZeroDivisionError:
+                fc_vel_dict[str(j * vel_step) + '-' + str((j + 1) * vel_step)]['fc_100_km'] = 0
+
+            try:
+                fc_vel_dict[str(j * vel_step) + '-' + str((j + 1) * vel_step)]['ec_100_km'] = \
+                    fc_vel_dict[str(j*vel_step)+'-'+str((j+1)*vel_step)]['ec_sum']/fc_vel_dict[str(j * vel_step) + '-' + str((j + 1) * vel_step)]['dis_sum']*100
+            except ZeroDivisionError:
+                fc_vel_dict[str(j * vel_step) + '-' + str((j + 1) * vel_step)]['ec_100_km'] = 0
+
+        fc_vel_dict['idle']['fc/time'] = fc_vel_dict['idle']['fc_sum'] / fc_vel_dict['idle']['time_sum']  # L/s
+        fc_vel_dict['idle']['net_fc/time'] = (fc_vel_dict['idle']['fc_sum'] + fc_vel_dict['idle']['ec_sum']/2.22)/ (fc_vel_dict['idle']['time_sum']/3600)  # L/h
+
+
+        output_file = open(r'C:\Users\吕惠加\Desktop\temp.json', 'w')
+        json.dump(fc_vel_dict, output_file)
+        output_file.close()
+        input_file = open(r'C:\Users\吕惠加\Desktop\temp.json', 'r')
+        fc_vel_dict = json.load(input_file)
+        input_file.close()
+
+        draw_fc_vs_velocity_bar(fc_vel_dict=fc_vel_dict, vel_start=vel_start, vel_stop=vel_stop, vel_step=vel_step)
+        export_bar_value(fc_vel_dict=fc_vel_dict)
 
         # settle length of extract input not equal with data record
         cycle_result['驾驶员'] = cycle_result['驾驶员'][0: len(cycle_result['EDU'])]
@@ -362,7 +475,9 @@ class FuelConsumption(object):
 
 if __name__ == '__main__':
     test_mode = False
-    work_range = ['GEN1', 'GEN2']
+    # work_range = ['GEN1', 'GEN2']
+    work_range = ['GEN2']
+
     root_path = 'D:/pythonCodes/function_stlye_module/fuel consumption/real_road_GEN1_GEN2'
     dbc_dict = {'GEN1':
                        {'velocity': 'VehSpdAvgNonDrvn_h1HSC1',

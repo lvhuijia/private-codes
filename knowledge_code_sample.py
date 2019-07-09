@@ -803,3 +803,75 @@ print('%s，%s' % ('test','6'))  # 顺次对应
 print('{1}，{0}，{1}'.format('test','6'))  # 非顺次对应，多次引用
 print('{{}}，{},{}'.format('test','6'))  # 括号转义
 '# 结束----------------------------'
+
+'多轴柱状图----------------------------'
+'''多轴legend原理通用,通过bar width和x=[0,1,2...]来对柱状图定位，再把x的标签修改成想要的值'''
+bar_list = []
+legend_list = []
+fig = plt.figure()
+x=[0, 1, 2, 3]
+bar_width = 0.3
+ax1 = fig.add_subplot(1,1,1)
+ax2 = ax1.twinx()
+bar1 = ax1.bar([i for i in x],[1,1,1,1],width=bar_width, color='r', label='1')
+bar2 = ax2.bar([i+bar_width for i in x],[1,2,3,4],width=bar_width, color='g', label='2')
+bar3 = ax1.bar([i-bar_width for i in x],[2,3,4,5],width=bar_width, color='black', label='3')
+bar_list.append(bar1)
+bar_list.append(bar2)
+bar_list.append(bar3)
+legend_list.append('fuel consumption(L/100km)')
+legend_list.append('electric consumption(L/100km)')
+legend_list.append('net fuel consumption(Kw/100km)')
+ax1.legend(bar_list, legend_list,loc='upper left')
+ax1.set_xticks([0,1,2,3])
+ax1.set_xticklabels(['a','b','c','d'])
+ax1.set_ylim([-2, 16])  # 设置lim和ticks来保证坐标轴对齐，只设置ticks，整个周可能会有偏移，导致对不齐
+ax2.set_ylim([-10, 35])
+ax1.set_yticks([-2 + i * 2 for i in range(0, 10)])
+ax2.set_yticks([-10 + i * 5 for i in range(0, 10)])
+ax1.set_xlabel('velocity(kph)')
+ax1.set_ylabel('fuel consumption')
+ax2.set_ylabel('electric consumption')
+fig.show()
+'# 结束----------------------------'
+
+'装饰器示例----------------------------'
+'''缓存'''
+# 装饰器增加缓存功能
+def cache(instance):
+    def wrapper(func):
+        def inner_wrapper(*args, **kwargs):
+            joint_args = ','.join((str(x) for x in args))
+            joint_kwargs = ','.join('{}={}'.format(k, v) for k, v in sorted(kwargs.items()))
+            key = '{}::{}::{}'.format(func.__name__,joint_args, joint_kwargs)
+            result = instance.get(key)
+            if result is not None:
+                return result
+            result = func(*args, **kwargs)
+            instance.set(key, result)
+            return result
+        return inner_wrapper
+    return wrapper
+
+
+# 创建字典构造函数，用户缓存K/V键值对
+class DictCache:
+    def __init__(self):
+        self.cache = dict()
+
+    def get(self, key):
+        return self.cache.get(key)
+
+    def set(self, key, value):
+        self.cache[key] = value
+
+# 创建缓存对象
+cache_instance = DictCache()
+
+# Python语法调用装饰器
+@cache(cache_instance)
+def long_time_func(x):
+    return x
+
+# 调用装饰过函数
+long_time_func(3)
