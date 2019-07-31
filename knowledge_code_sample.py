@@ -875,3 +875,11 @@ def long_time_func(x):
 
 # 调用装饰过函数
 long_time_func(3)
+
+'yield+循环应用示例----------------------------'
+'''循环yield，直到generator耗尽'''
+while True:
+    try:
+        subgk_info = file_router.__next__()
+    except StopIteration:
+        break

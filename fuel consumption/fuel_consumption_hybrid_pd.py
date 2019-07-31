@@ -299,6 +299,7 @@ class FuelConsumption(object):
                 cycle_result['怠速时间(s)'].append(round(sum([1 for i in range(0, len(vel_gps)) if (enspd[i] > 500) & (vel_gps[i] == 0)])/fre, 1))
                 cycle_result['怠速充电时间(s)'].append(round(sum([1 for i in range(0, len(vel_gps)) if (enspd[i] > 500) & (vel_gps[i] == 0) &
                                                             (current[i] < 0)])/fre, 1))
+                print( cycle_result['怠速时间(s)'][-1])
                 if cycle_result['怠速时间(s)'][-1] != 0:
                     cycle_result['怠速时充电时间占比(%)'].append(round(cycle_result['怠速充电时间(s)'][-1]/cycle_result['怠速时间(s)'][-1], 2)*100)
                 else:
@@ -358,15 +359,15 @@ class FuelConsumption(object):
         fc_vel_dict['idle']['net_fc/time'] = (fc_vel_dict['idle']['fc_sum'] + fc_vel_dict['idle']['ec_sum']/2.22)/ (fc_vel_dict['idle']['time_sum']/3600)  # L/h
 
 
-        output_file = open(r'C:\Users\吕惠加\Desktop\temp.json', 'w')
-        json.dump(fc_vel_dict, output_file)
-        output_file.close()
-        input_file = open(r'C:\Users\吕惠加\Desktop\temp.json', 'r')
-        fc_vel_dict = json.load(input_file)
-        input_file.close()
+        # output_file = open(r'C:\Users\吕惠加\Desktop\temp.json', 'w')
+        # json.dump(fc_vel_dict, output_file)
+        # output_file.close()
+        # input_file = open(r'C:\Users\吕惠加\Desktop\temp.json', 'r')
+        # fc_vel_dict = json.load(input_file)
+        # input_file.close()
 
-        draw_fc_vs_velocity_bar(fc_vel_dict=fc_vel_dict, vel_start=vel_start, vel_stop=vel_stop, vel_step=vel_step)
-        export_bar_value(fc_vel_dict=fc_vel_dict)
+        # draw_fc_vs_velocity_bar(fc_vel_dict=fc_vel_dict, vel_start=vel_start, vel_stop=vel_stop, vel_step=vel_step)
+        # export_bar_value(fc_vel_dict=fc_vel_dict)
 
         # settle length of extract input not equal with data record
         cycle_result['驾驶员'] = cycle_result['驾驶员'][0: len(cycle_result['EDU'])]
