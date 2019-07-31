@@ -1,0 +1,9 @@
+src/fun_test
+src/index
+.idea
+*.pyc
+.DS_Store
+__pycache__
+venv
+venv2
+*.cpython-36.pyc
