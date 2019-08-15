@@ -130,9 +130,10 @@ function LoadinData_Callback(hObject, eventdata, handles)
 %输入采样时间
 function SampleTime_Callback(hObject, eventdata, handles)
 % hObject    handle to SampleTime (see GCBO)
-global testData splt spt
+global testData splt spt fre
 spt=eval(get(handles.SplTime,'string'));
 splt=0:spt:(length(testData)-1)*spt;
+fre=1/spt;
 msgbox('采样时间设定成功')
 
 %% --- Executes on selection change in menuTimeData.
@@ -271,21 +272,21 @@ function Caculate_Callback(hObject, eventdata, handles)
 % hObject    handle to Caculate (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-    global testData splt FileName
+    global testData splt FileName fre
 gear_flag=get(handles.checkbox1,'Value');    
 
     %% 针对acc，小波滤波
-%     acc_index = get(handles.menuAccData,'Value'); %%value存储了选择的下拉菜单项目的序号
-% %     time_index = get(handles.menuTimeData,'Value');
-%     enginespeed_index = get(handles.menuEngineSpeedData,'Value');
-%     gear_index = get(handles.menuGearData,'Value');
-%     speed_index = get(handles.menuSpeedData,'Value');
-%     pedal_index = get(handles.menuPedalData,'Value');
-%     kickdown_index=get(handles.kickdown,'Value');
-%     save index_list acc_index enginespeed_index gear_index speed_index pedal_index kickdown_index
+    acc_index = get(handles.menuAccData,'Value'); %%value存储了选择的下拉菜单项目的序号
+%     time_index = get(handles.menuTimeData,'Value');
+    enginespeed_index = get(handles.menuEngineSpeedData,'Value');
+    gear_index = get(handles.menuGearData,'Value');
+    speed_index = get(handles.menuSpeedData,'Value');
+    pedal_index = get(handles.menuPedalData,'Value');
+    kickdown_index=get(handles.kickdown,'Value');
+    save index_list acc_index enginespeed_index gear_index speed_index pedal_index kickdown_index
     
-    load index_list
-    pedal_index
+%     load index_list
+%     pedal_index
     
     kickdown_data=cell2mat(testData(:,kickdown_index));
     assignin('base','testData',testData)
@@ -340,7 +341,7 @@ index2=[index1(1);index1(ee_index1>10);index1(end)]; %%acc增加到不再连续增加的时
 index(:,1)=index2(1:end-1); %%粗筛工况边界
 index(:,2)=index2(2:end)-1;
 index(end,2)=length(pedal); %%第二列最后一个赋值为信号的总数（结束时刻）
-index(index(:,2)-index(:,1)<60,:)=[];
+index(index(:,2)-index(:,1)<fre*3,:)=[];
 %tipin之前车速稳定，pedal稳定
 
 for ii=1:1:length(index(:,1))
@@ -348,7 +349,7 @@ for ii=1:1:length(index(:,1))
     pedalmax=max(pedalcal);
     index(ii,3)=find(abs(pedalcal-pedalmax)<1.5,1)+index(ii,1)-1;   %第3列为达到最高pedal值起始位置
     
-    index(ii,4)=max(acc(index(ii,1):index(ii,1)+60));%第四列为过程3s内最大加速度值
+    index(ii,4)=max(acc(index(ii,1):index(ii,1)+fre*3));%第四列为过程3s内最大加速度值
     index(ii,5)=max(pedalcal)-pedalcal(1);%第5列为最大pedal值与起始pedal值的差值
     index(ii,8)=max(find(abs(pedalcal-pedalmax)<1.5))+index(ii,1)-1;%第8列为达到最高pedal值结束位置
     pedalminnd=min(pedal(index(ii,8):index(ii,2)));
@@ -362,8 +363,8 @@ assignin('base','time',time)
 assignin('base','pedal',pedal)
 
 %%可调参数----------
-holdtime=3; %pedal持续时间修改
-acc_respond=0.05; %加速度最大值修改
+holdtime=5; %pedal持续时间修改
+acc_respond=0.03; %加速度最大值修改
 time_range=6;
 acc_range=0.5; %绘图纵坐上限设置
 gear_range=7;

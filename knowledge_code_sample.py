@@ -352,6 +352,12 @@ series.resample('3T').sum()  # series.resample('3T')产生一个resampler，.sum
 series.resample('3T', label='right').sum()  # 重采样时间间隔之间的时间区间，时间Label统一取右边时间，默认为左边
 '# 结束----------------------------'
 
+'pandas重采样：df.resample(r_r).ffill()'
+'''r_r是str类型，值为str(int(1e9/重采样频率)+'N'(1s=1e9ns，意思是用字符串的形式表达每隔多少ns重采样一个点)
+df要求index为 datetime-like index (DatetimeIndex,PeriodIndex, or TimedeltaIndex)，可以人为构造时间戳，并赋值给df.index
+ffill()是用来填充NaN值的，ffill表示front fill，NaN用前面的邻近有效值来填充，bfill()表示向后填充，NaN用后面的邻近有效值来填充
+'''
+
 '# parse(timestr, parserinfo=None, **kwargs)----------------------------'
 '''由dateutil.parser导入，用于解析字符串形式的日期信息,kwargs包含yearfirst,如果是True，即7/25/2018第一部分7是年份，否则最后一部分2018是年份，默认是False
 dayfirst=True代表第一个是日，否则第一个是月，默认是False，逻辑是先根据yearfirst确定年的位置，如果年是第一，再根据dayfirst确定是YMD还是YDM,另外，会根据YDM
@@ -804,6 +810,18 @@ print('{1}，{0}，{1}'.format('test','6'))  # 非顺次对应，多次引用
 print('{{}}，{},{}'.format('test','6'))  # 括号转义
 '# 结束----------------------------'
 
+'pandas.merge((left, right, how=\'inner\', on=None, left_on=None, right_on=None, left_index=False, right_index=False, sort=True, suffixes=('_x', '_y'), copy=True, indicator=False, validate=None)'
+'''多轴legend原理通用,通过bar width和x=[0,1,2...]来对柱状图定位，再把x的标签修改成想要的值'''
+left = pd.DataFrame({'key': ['K0', 'K1', 'K2', 'K3'],
+                       'A': ['A0', 'A1', 'A2', 'A3'],
+                       'B': ['B0', 'B1', 'B2', 'B3']})
+right = pd.DataFrame({'key': ['K0', 'K1', 'K2', 'K3'],
+                        'C': ['C0', 'C1', 'C2', 'C3'],
+                        'D': ['D0', 'D1', 'D2', 'D3']})
+result = pd.merge(left, right, on='key')  # 以key列为键拼接，两个df中，key列相同的行拼接，如果左右df的key列中有不同的元素，则舍去
+
+'# 结束----------------------------'
+
 '多轴柱状图----------------------------'
 '''多轴legend原理通用,通过bar width和x=[0,1,2...]来对柱状图定位，再把x的标签修改成想要的值'''
 bar_list = []
@@ -875,6 +893,7 @@ def long_time_func(x):
 
 # 调用装饰过函数
 long_time_func(3)
+'# 结束----------------------------'
 
 'yield+循环应用示例----------------------------'
 '''循环yield，直到generator耗尽'''
@@ -883,3 +902,34 @@ while True:
         subgk_info = file_router.__next__()
     except StopIteration:
         break
+'# 结束----------------------------'
+
+'pandas综合应用案例'
+'''有一个记录换挡点的df，需要扩展为记录了所有时刻所在档位的df'''
+df = pd.DataFrame({'time':[1,5,9], 'gear': [1,2,3]})  # 换挡点
+df_time = pd.DataFrame({'time': range(0, 11)})  # 构造所有时刻序列
+df_ful = pd.merge(df, df_time, how='outer', on='time')  # 合并df，on=time表示以time列为基准合并，
+# how=outer表示用两个df的time列元素并集合并（inner表示交集），没有的用NAN填充，因为df_time是完整的时间序列，所以outer可以改为right
+df_ful.sort_values(by='time', inplace=True)  # 按时间列排序，形如df.xx的操作，注意inplace设置为True，否则要把结果赋值给新变量
+df_ful.ffill(inplace=True)  # 填充NAN向前取值
+df_ful.bfill(inplace=True)  # 把第一个NAN填充掉
+'# 结束----------------------------'
+
+'字符串转换为数字'
+'''浮点数和整型数转换方式不同'''
+str1 = '1.0'
+str2 = '1'
+num1 = float(str1) # 不能用int
+num2 = int(str2) # 可以用float
+'# 结束----------------------------'
+
+'读txt'
+'''逐行读'''
+with open(file_path, 'r') as f:
+    while True:
+        line = f.readline()
+        if not line: # 非空行,注意可能是中间的空行，也可能是最后一行
+            break
+        else:
+            pass  # 对每一行信息提取操作等
+'# 结束----------------------------'
