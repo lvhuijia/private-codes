@@ -313,7 +313,7 @@ list(enumerate(seasons))
 
 '# groupby(iterable[, keyfunction])----------------------------'
 '''from itertools import groupby 根据keyfunction定义的内容来对iterable内容分组'''
-groupby(enumerate(np.array(np.where(flag))),lambda x: x[1] - x[0])  # 用于给连续点系列分组的函数，如flag=[0,1,1,0,1]时，np.where(flag)返回1，2，4
+groupby(enumerate(np.array(np.where(flag)[0])),lambda x: x[1] - x[0])  # 用于给连续点系列分组的函数，如flag=[0,1,1,0,1]时，np.where(flag)返回1，2，4
 # enumerate(np.array(np.where(flag)))产生# (0,1),(1,2),(2,4),lambda函数定义每个tuple中后减前，以减出来的数作为判据去分组，即分成差为1和差为2两组
 # 可以用for i,j in groupby(...)循环引用，其中i为第i组，j为对应组的grouper object,通过Next可以看到组里面的tuple元素，一个tuple中，第一个为序号，第二个为组内的具体元素list
 '# 结束----------------------------'
@@ -561,18 +561,27 @@ dic1.pop('name3', 'not exist')
 '# 结束----------------------------'
 
 '#  dict.update(dict)----------------------------'
-'''用一个字典更新另外一个字典，如果没有的key会被添加，若key存在，则value被替代，注意！！！当字典update后，之前这个字典被赋到其他地方时，这些地方的值会随之改变'''
+'''用一个字典更新另外一个字典，如果没有的key会被添加，若key存在，则value被替代，注意！！！当字典update后，直接替代原字典，
+而不会另外返回新字典（所以不能用update后的东西作为参数输入给函数，如func(dicta.update(dictb)），因而之前这个字典被赋到其他
+变量时，这些地方的值会随之改变（变量指针所指向的内存数据发生变化）'''
 dic1 = {'s': 1}
 list1  = []
 list1.append(dic1)
 dic1.update({'s': 2})
-
 '# 结束----------------------------'
 
 
-'#  dict(key1=value1,key2=value2,)----------------------------'
-'''定义字典两种方法等效，Pop函数根据key返回value并删除字典内相关内容，并可设置默认值，
-当key不存在时，返回默认值'''
+'#  根据value在字典中查key（反查）----------------------------'
+'''思路：列出字典的key和value，产生两个对应的有序序列，在value序列中找到某值的index，再用同样的index去查key序列，
+因为index的特性，有多个相同value时，返回列表中的第一个'''
+a = {'a':1, 'b':2, 'c':1}
+list(a.keys())[list(a.values()).index(1)]
+'# 结束----------------------------'
+
+
+'#  dict(key1=value1,key2=value2,**kwarg)----------------------------'
+'''kwarg的关键字只能是字符串（函数传参规定），因此以**dict1的形式传入，dict1的key必须是字符串。样例中定义字典两种方法等效，
+Pop函数根据key返回value并删除字典内相关内容，并可设置默认值，当key不存在时，返回默认值'''
 dic1 = dict(name1=1, name2=2)  # 这里name是关键字参数传入，不用引号
 dic2 = {'name1': 1, 'name2': 2}  # 这里name是字符串，要引号
 dic1 == dic2
