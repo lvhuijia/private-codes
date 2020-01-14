@@ -957,3 +957,13 @@ with open(file_path, 'r') as f:
         else:
             pass  # 对每一行信息提取操作等
 '# 结束----------------------------'
+
+'弹窗选择'
+'''弹窗选择'''
+import tkinter as tk
+from tkinter import filedialog
+root = tk.TK()
+root.withdraw()
+folderpath = filedialog.askdirectory()
+print(folderpath)
+'# 结束----------------------------'
