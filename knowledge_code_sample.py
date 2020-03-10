@@ -548,7 +548,7 @@ fig = plt.figure()
 ax = fig.add_subplot(111)
 ax.plot(x, y, color='green', linestyle='dashed', marker='*', markerfacecolor='blue',
          markersize=8)
-
+11
 
 '#  dict(key1=value1,key2=value2,)----------------------------'
 '''定义字典两种方法等效，Pop函数根据key返回value并删除字典内相关内容，并可设置默认值，
