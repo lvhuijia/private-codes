@@ -5,8 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import xlwt
-import pywt
-from mongo import MongoClient
+# import pywt
+# from mongo import MongoClient
 import datetime
 
 
@@ -53,7 +53,7 @@ class TipIn(object):
         velocity_max_still = 0.1  # maximum velocity when stay still, used for acc offset correction
         # parameters setting ends
 
-        tipin_Data_ful = pd.read_csv(self.filepath)
+        tipin_Data_ful = pd.read_csv(self.filepath, encoding='GB18030')
         tipin_Data_Selc = tipin_Data_ful.loc[:, ['AccelActuPosHSC1', 'EnSpdHSC1', 'MSLongAccelGHSC',
                                                  'VehSpdAvgNonDrvnHSC1', 'TrEstdGear_TCMHSC1', 'kickdown']]
 
@@ -367,7 +367,7 @@ class TipIn(object):
 if __name__ == '__main__':
     # *******1-GetSysGainData****** AS22_C16UVV016_SystemGain_20160925_D_M_SL, IP31_L16UOV055_10T_SystemGain_20160225
     # a = TipIn(file_path='./function_stlye_module/tip in/20180314_171727(362_6)_tip_in_E.csv', teststr='test')
-    a = TipIn(file_path='D:/pythonCodes/function_stlye_module/tip in/20180314_171727(362_6)_tip_in_E.csv', teststr='test')
+    a = TipIn(file_path=r'C:\Users\lvhui\Desktop\to Lvhuijia\IP31MCE.csv', teststr='test')
     a.tipin_main()
     # plt.show()
 
